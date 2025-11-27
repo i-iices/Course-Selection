@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ระบบจัดการข้อมูลนักศึกษา</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+    <style>
+        .stat-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .course-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            margin: 0.125rem;
+            display: inline-block;
+        }
+        .student-detail-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            margin: 0 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="dashboard.html">
+                📊 Student Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="index.html">📝 แบบฟอร์มลงทะเบียน</a>
+                <a class="nav-link active" href="dashboard.html">📈 Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h2 fw-bold">Dashboard การลงทะเบียน</h1>
+                <p class="text-muted">จัดการข้อมูลนักศึกษาและสถิติการลงทะเบียน</p>
+                <div class="alert alert-info">
+                    <strong>📢 ข้อมูลแสดงแบบ Real-time</strong> - อัพเดทอัตโนมัติเมื่อมีนักเรียนลงทะเบียนใหม่
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stat-card border-primary">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-primary text-white">
+                                👨‍🎓
+                            </div>
+                            <div class="ms-3">
+                                <h4 class="mb-0" id="total-students">0</h4>
+                                <p class="text-muted mb-0">นักศึกษาทั้งหมด</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stat-card border-success">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-success text-white">
+                                📚
+                            </div>
+                            <div class="ms-3">
+                                <h4 class="mb-0" id="total-courses">0</h4>
+                                <p class="text-muted mb-0">วิชาที่ลงทะเบียน</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stat-card border-warning">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-warning text-white">
+                                💻
+                            </div>
+                            <div class="ms-3">
+                                <h4 class="mb-0" id="software-count">0</h4>
+                                <p class="text-muted mb-0">วิศวกรรมซอฟต์แวร์</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card stat-card border-info">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="stat-icon bg-info text-white">
+                                📊
+                            </div>
+                            <div class="ms-3">
+                                <h4 class="mb-0" id="data-science-count">0</h4>
+                                <p class="text-muted mb-0">วิทยาศาสตร์ข้อมูล</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Students Table -->
+            <div class="col-xl-8 mb-4">
+                <div class="card">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">📋 รายชื่อนักศึกษาที่ลงทะเบียน</h5>
+                        <span class="badge bg-primary" id="table-count">0 รายการ</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="students-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>รหัสนักศึกษา</th>
+                                        <th>ชื่อ-นามสกุล</th>
+                                        <th>สาขาวิชา</th>
+                                        <th>ชั้นปี</th>
+                                        <th>จำนวนวิชา</th>
+                                        <th>วันที่ลงทะเบียน</th>
+                                        <th>การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-tbody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            ⏳ กำลังโหลดข้อมูล...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Charts and Stats -->
+            <div class="col-xl-4 mb-4">
+                <!-- Track Statistics -->
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">📈 สถิติสาขาวิชา</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trackChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Popular Courses -->
+                <div class="card mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">🔥 วิชายอดนิยม</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="popular-courses">
+                            <p class="text-muted text-center">กำลังโหลด...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Registrations -->
+                <div class="card mt-4">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">🆕 ลงทะเบียนล่าสุด</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recent-registrations">
+                            <p class="text-muted text-center">กำลังโหลด...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Details Modal -->
+        <div class="modal fade" id="studentModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">👨‍🎓 รายละเอียดนักศึกษา</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="student-details">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">กำลังโหลดข้อมูล...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Data Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">📥 ส่งออกข้อมูล</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <button class="btn btn-outline-primary w-100" onclick="firebaseDashboard.exportToJSON()">
+                                    📄 JSON
+                                </button>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <button class="btn btn-outline-success w-100" onclick="firebaseDashboard.exportToCSV()">
+                                    📊 CSV
+                                </button>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <button class="btn btn-outline-info w-100" onclick="firebaseDashboard.printData()">
+                                    🖨️ พิมพ์
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="dashboard-firebase.js"></script>
+</body>
+</html>
