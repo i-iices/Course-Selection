@@ -26,6 +26,7 @@ const courseData = {
 // Global variables
 let selectedCourses = [];
 let studentInfo = {};
+let currentLanguage = 'th';
 
 // DOM elements
 const studentInfoForm = document.getElementById('studentInfoForm');
@@ -144,303 +145,389 @@ const translations = {
   }
 };
 
+// ==================== FIREBASE FUNCTIONS ====================
+
+// Function to save data to Firebase
+async function saveToFirebase(studentInfo, selectedCourses) {
+    try {
+        const db = firebase.firestore();
+        const docRef = await db.collection('registrations').add({
+            firstName: studentInfo.firstName,
+            lastName: studentInfo.lastName,
+            email: studentInfo.email,
+            studentId: studentInfo.studentId,
+            track: studentInfo.track,
+            year: studentInfo.year,
+            term: studentInfo.term,
+            courses: selectedCourses,
+            registrationDate: firebase.firestore.FieldValue.serverTimestamp(),
+            status: 'active'
+        });
+        console.log('✅ บันทึกข้อมูลสำเร็จ ID:', docRef.id);
+        return { success: true, id: docRef.id };
+    } catch (error) {
+        console.error('❌ Error saving to Firebase:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Function to check if student ID already exists
+async function checkDuplicateStudent(studentId) {
+    try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection('registrations')
+            .where('studentId', '==', studentId)
+            .where('status', '==', 'active')
+            .get();
+        
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+        return false;
+    }
+}
+
+// ==================== MAIN FUNCTIONS ====================
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('ระบบเลือกวิชาเริ่มทำงานแล้ว');
-  
-  // Set up language switcher
-  langButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      const lang = this.getAttribute('data-lang');
-      switchLanguage(lang);
+    console.log('🚀 ระบบเลือกวิชาเริ่มทำงานแล้ว');
+    
+    // Set up language switcher
+    langButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            switchLanguage(lang);
+        });
     });
-  });
 
-  // Set up form navigation
-  studentInfoForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (validateStudentInfo()) {
-      goToPage2();
-    }
-  });
+    // Set up form navigation
+    studentInfoForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (validateStudentInfo()) {
+            goToPage2();
+        }
+    });
 
-  backBtn.addEventListener('click', goToPage1);
-  submitBtn.addEventListener('click', submitRegistration);
-  newRegistrationBtn.addEventListener('click', resetForm);
+    backBtn.addEventListener('click', goToPage1);
+    submitBtn.addEventListener('click', submitRegistration);
+    newRegistrationBtn.addEventListener('click', resetForm);
 
-  // Initialize with Thai language
-  switchLanguage('th');
+    // Initialize with Thai language
+    switchLanguage('th');
 });
 
 // Language switching function
 function switchLanguage(lang) {
-  currentLanguage = lang;
-  
-  // Update active language button
-  langButtons.forEach(button => {
-    if (button.getAttribute('data-lang') === lang) {
-      button.classList.add('active');
-    } else {
-      button.classList.remove('active');
+    currentLanguage = lang;
+    
+    // Update active language button
+    langButtons.forEach(button => {
+        if (button.getAttribute('data-lang') === lang) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+    
+    // Update all elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[lang][key]) {
+            element.textContent = translations[lang][key];
+        }
+    });
+    
+    // Update course list if we're on page 2
+    if (page2.classList.contains('active')) {
+        generateCourseList();
+        updateSelectedCoursesList();
     }
-  });
-  
-  // Update all elements with data-i18n attribute
-  document.querySelectorAll('[data-i18n]').forEach(element => {
-    const key = element.getAttribute('data-i18n');
-    if (translations[lang][key]) {
-      element.textContent = translations[lang][key];
-    }
-  });
-  
-  // Update placeholders for inputs
-  document.querySelectorAll('input[placeholder], select option').forEach(element => {
-    const placeholderText = element.getAttribute('placeholder');
-    if (placeholderText && translations[lang][placeholderText]) {
-      element.setAttribute('placeholder', translations[lang][placeholderText]);
-    }
-  });
-  
-  // Update course list if we're on page 2
-  if (page2.classList.contains('active')) {
-    generateCourseList();
-    updateSelectedCoursesList();
-  }
 }
 
 // Validate student information form
-function validateStudentInfo() {
-  let isValid = true;
-  
-  // Reset error messages
-  document.querySelectorAll('.field-error').forEach(error => {
-    error.style.display = 'none';
-  });
-  
-  // Validate first name
-  const fname = document.getElementById('fname');
-  if (!fname.value.trim()) {
-    document.getElementById('fname-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate last name
-  const lname = document.getElementById('lname');
-  if (!lname.value.trim()) {
-    document.getElementById('lname-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate email
-  const email = document.getElementById('email');
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email.value.trim() || !emailRegex.test(email.value)) {
-    document.getElementById('email-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate student ID
-  const studentId = document.getElementById('studentId');
-  if (!studentId.value.trim()) {
-    document.getElementById('studentId-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate track
-  const track = document.getElementById('track');
-  if (!track.value) {
-    document.getElementById('track-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate year
-  const year = document.getElementById('year');
-  if (!year.value) {
-    document.getElementById('year-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  // Validate term
-  const term = document.getElementById('term');
-  if (!term.value) {
-    document.getElementById('term-error').style.display = 'block';
-    isValid = false;
-  }
-  
-  return isValid;
+async function validateStudentInfo() {
+    let isValid = true;
+    
+    // Reset error messages
+    document.querySelectorAll('.field-error').forEach(error => {
+        error.style.display = 'none';
+    });
+    
+    // Validate first name
+    const fname = document.getElementById('fname');
+    if (!fname.value.trim()) {
+        document.getElementById('fname-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate last name
+    const lname = document.getElementById('lname');
+    if (!lname.value.trim()) {
+        document.getElementById('lname-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate email
+    const email = document.getElementById('email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim() || !emailRegex.test(email.value)) {
+        document.getElementById('email-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate student ID
+    const studentId = document.getElementById('studentId');
+    if (!studentId.value.trim()) {
+        document.getElementById('studentId-error').style.display = 'block';
+        isValid = false;
+    } else {
+        // Check for duplicate student ID
+        const isDuplicate = await checkDuplicateStudent(studentId.value.trim());
+        if (isDuplicate) {
+            alert(currentLanguage === 'th' 
+                ? '❌ รหัสนักศึกษานี้ได้ลงทะเบียนไว้แล้ว' 
+                : '❌ This student ID is already registered');
+            document.getElementById('studentId-error').style.display = 'block';
+            document.getElementById('studentId-error').textContent = 
+                currentLanguage === 'th' ? 'รหัสนักศึกษานี้ได้ลงทะเบียนไว้แล้ว' : 'This student ID is already registered';
+            isValid = false;
+        }
+    }
+    
+    // Validate track
+    const track = document.getElementById('track');
+    if (!track.value) {
+        document.getElementById('track-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate year
+    const year = document.getElementById('year');
+    if (!year.value) {
+        document.getElementById('year-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    // Validate term
+    const term = document.getElementById('term');
+    if (!term.value) {
+        document.getElementById('term-error').style.display = 'block';
+        isValid = false;
+    }
+    
+    return isValid;
 }
 
 // Navigate to page 2 (course selection)
 function goToPage2() {
-  // Save student info
-  studentInfo = {
-    firstName: document.getElementById('fname').value,
-    lastName: document.getElementById('lname').value,
-    email: document.getElementById('email').value,
-    studentId: document.getElementById('studentId').value,
-    track: document.getElementById('track').value,
-    year: document.getElementById('year').value,
-    term: document.getElementById('term').value
-  };
-  
-  // Update display track
-  const trackSelect = document.getElementById('track');
-  const selectedOption = trackSelect.options[trackSelect.selectedIndex];
-  displayTrack.textContent = selectedOption.textContent;
-  
-  // Generate course list based on selected track
-  generateCourseList();
-  
-  // Update progress bar
-  progressBar.style.width = '100%';
-  
-  // Switch to page 2
-  page1.classList.remove('active');
-  page2.classList.add('active');
-  successMessage.style.display = 'none';
+    // Save student info
+    studentInfo = {
+        firstName: document.getElementById('fname').value,
+        lastName: document.getElementById('lname').value,
+        email: document.getElementById('email').value,
+        studentId: document.getElementById('studentId').value,
+        track: document.getElementById('track').value,
+        year: document.getElementById('year').value,
+        term: document.getElementById('term').value
+    };
+    
+    // Update display track
+    const trackSelect = document.getElementById('track');
+    const selectedOption = trackSelect.options[trackSelect.selectedIndex];
+    displayTrack.textContent = selectedOption.textContent;
+    
+    // Generate course list based on selected track
+    generateCourseList();
+    
+    // Update progress bar
+    progressBar.style.width = '100%';
+    
+    // Switch to page 2
+    page1.classList.remove('active');
+    page2.classList.add('active');
+    successMessage.style.display = 'none';
 }
 
 // Navigate back to page 1 (student info)
 function goToPage1() {
-  // Update progress bar
-  progressBar.style.width = '50%';
-  
-  // Switch to page 1
-  page2.classList.remove('active');
-  page1.classList.add('active');
+    // Update progress bar
+    progressBar.style.width = '50%';
+    
+    // Switch to page 1
+    page2.classList.remove('active');
+    page1.classList.add('active');
 }
 
 // Generate course list based on selected track
 function generateCourseList() {
-  const track = studentInfo.track;
-  const courses = courseData[track] || [];
-  
-  courseList.innerHTML = '';
-  
-  if (courses.length === 0) {
-    courseList.innerHTML = '<div class="text-center text-muted">ไม่มีวิชาในสาขานี้</div>';
-    return;
-  }
-  
-  courses.forEach(course => {
-    const isSelected = selectedCourses.some(c => c.id === course.id);
+    const track = studentInfo.track;
+    const courses = courseData[track] || [];
     
-    const courseCard = document.createElement('div');
-    courseCard.className = `course-card ${isSelected ? 'selected' : ''}`;
-    courseCard.setAttribute('data-course-id', course.id);
+    courseList.innerHTML = '';
     
-    courseCard.innerHTML = `
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="course-${course.id}" 
-               ${isSelected ? 'checked' : ''}>
-        <label class="form-check-label w-100" for="course-${course.id}">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="mb-1">${course.name}</h6>
-              <div class="course-description">${course.description}</div>
+    if (courses.length === 0) {
+        courseList.innerHTML = '<div class="text-center text-muted">ไม่มีวิชาในสาขานี้</div>';
+        return;
+    }
+    
+    courses.forEach(course => {
+        const isSelected = selectedCourses.some(c => c.id === course.id);
+        
+        const courseCard = document.createElement('div');
+        courseCard.className = `course-card ${isSelected ? 'selected' : ''}`;
+        courseCard.setAttribute('data-course-id', course.id);
+        
+        courseCard.innerHTML = `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="course-${course.id}" 
+                    ${isSelected ? 'checked' : ''}>
+                <label class="form-check-label w-100" for="course-${course.id}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${course.name}</h6>
+                            <div class="course-description">รหัสวิชา: ${course.id} | ${course.credits} หน่วยกิต</div>
+                        </div>
+                        <div class="course-credits">${course.credits} หน่วยกิต</div>
+                    </div>
+                </label>
             </div>
-            <div class="course-credits">${course.credits} หน่วยกิต</div>
-          </div>
-        </label>
-      </div>
-    `;
-    
-    courseCard.addEventListener('click', function(e) {
-      // Don't toggle if clicking directly on the checkbox (let the default behavior handle it)
-      if (e.target.type !== 'checkbox') {
-        const checkbox = this.querySelector('input[type="checkbox"]');
-        checkbox.checked = !checkbox.checked;
-      }
-      
-      toggleCourseSelection(course);
+        `;
+        
+        courseCard.addEventListener('click', function(e) {
+            // Don't toggle if clicking directly on the checkbox (let the default behavior handle it)
+            if (e.target.type !== 'checkbox') {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+            }
+            
+            toggleCourseSelection(course);
+        });
+        
+        courseList.appendChild(courseCard);
     });
-    
-    courseList.appendChild(courseCard);
-  });
 }
 
 // Toggle course selection
 function toggleCourseSelection(course) {
-  const index = selectedCourses.findIndex(c => c.id === course.id);
-  
-  if (index === -1) {
-    // Check if we've reached the maximum
-    if (selectedCourses.length >= 7) {
-      alert(currentLanguage === 'th' 
-        ? 'คุณเลือกวิชาได้สูงสุด 7 วิชาเท่านั้น' 
-        : 'You can select up to 7 courses only');
-      return;
+    const index = selectedCourses.findIndex(c => c.id === course.id);
+    
+    if (index === -1) {
+        // Check if we've reached the maximum credits (21)
+        const currentCredits = selectedCourses.reduce((sum, c) => sum + c.credits, 0);
+        if (currentCredits + course.credits > 21) {
+            alert(currentLanguage === 'th' 
+                ? `❌ ไม่สามารถเลือกเกิน 21 หน่วยกิต (ปัจจุบัน: ${currentCredits} หน่วยกิต)` 
+                : `❌ Cannot exceed 21 credits (Current: ${currentCredits} credits)`);
+            return;
+        }
+        
+        // Add course to selection
+        selectedCourses.push(course);
+    } else {
+        // Remove course from selection
+        selectedCourses.splice(index, 1);
     }
     
-    // Add course to selection
-    selectedCourses.push(course);
-  } else {
-    // Remove course from selection
-    selectedCourses.splice(index, 1);
-  }
-  
-  // Update UI
-  updateSelectedCoursesList();
-  generateCourseList(); // Regenerate to update selected state
+    // Update UI
+    updateSelectedCoursesList();
+    generateCourseList(); // Regenerate to update selected state
 }
 
 // Update the selected courses list
 function updateSelectedCoursesList() {
-  selectedCoursesList.innerHTML = '';
-  
-  let totalCredits = 0;
-  
-  if (selectedCourses.length === 0) {
-    const emptyItem = document.createElement('li');
-    emptyItem.textContent = currentLanguage === 'th' ? 'ยังไม่มีวิชาที่เลือก' : 'No courses selected';
-    emptyItem.className = 'text-muted';
-    selectedCoursesList.appendChild(emptyItem);
-  } else {
-    selectedCourses.forEach(course => {
-      const listItem = document.createElement('li');
-      listItem.className = 'mb-1';
-      listItem.innerHTML = `<span class="fw-semibold">${course.name}</span> <span class="text-muted">(${course.credits} หน่วยกิต)</span>`;
-      selectedCoursesList.appendChild(listItem);
-      
-      totalCredits += course.credits;
-    });
-  }
-  
-  // Update totals
-  totalCreditsEl.textContent = totalCredits;
-  totalCoursesEl.textContent = selectedCourses.length;
+    selectedCoursesList.innerHTML = '';
+    
+    let totalCredits = 0;
+    
+    if (selectedCourses.length === 0) {
+        const emptyItem = document.createElement('li');
+        emptyItem.textContent = currentLanguage === 'th' ? 'ยังไม่มีวิชาที่เลือก' : 'No courses selected';
+        emptyItem.className = 'text-muted';
+        selectedCoursesList.appendChild(emptyItem);
+    } else {
+        selectedCourses.forEach(course => {
+            const listItem = document.createElement('li');
+            listItem.className = 'mb-2 p-2 border rounded';
+            listItem.innerHTML = `
+                <div class="fw-semibold">${course.name}</div>
+                <small class="text-muted">รหัส: ${course.id} | ${course.credits} หน่วยกิต</small>
+            `;
+            selectedCoursesList.appendChild(listItem);
+            
+            totalCredits += course.credits;
+        });
+    }
+    
+    // Update totals
+    totalCreditsEl.textContent = totalCredits;
+    totalCoursesEl.textContent = selectedCourses.length;
+    
+    // Update submit button text
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.innerHTML = currentLanguage === 'th' 
+            ? `ยืนยันการลงทะเบียน (${selectedCourses.length} วิชา, ${totalCredits} หน่วยกิต)`
+            : `Confirm Registration (${selectedCourses.length} courses, ${totalCredits} credits)`;
+    }
 }
 
 // Submit the registration
-function submitRegistration() {
-  if (selectedCourses.length === 0) {
-    alert(currentLanguage === 'th' 
-      ? 'กรุณาเลือกอย่างน้อย 1 วิชา' 
-      : 'Please select at least 1 course');
-    return;
-  }
-  
-  // In a real application, you would send data to a server here
-  console.log('Student Info:', studentInfo);
-  console.log('Selected Courses:', selectedCourses);
-  
-  // Show success message
-  page2.classList.remove('active');
-  successMessage.style.display = 'block';
+async function submitRegistration() {
+    if (selectedCourses.length === 0) {
+        alert(currentLanguage === 'th' 
+            ? '❌ กรุณาเลือกอย่างน้อย 1 วิชา' 
+            : '❌ Please select at least 1 course');
+        return;
+    }
+    
+    // Show loading state
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = currentLanguage === 'th' ? '⏳ กำลังบันทึกข้อมูล...' : '⏳ Saving...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Save to Firebase
+        const result = await saveToFirebase(studentInfo, selectedCourses);
+        
+        if (result.success) {
+            // Show success message
+            page2.classList.remove('active');
+            successMessage.style.display = 'block';
+            
+            console.log('🎉 ลงทะเบียนสำเร็จ! ID:', result.id);
+            console.log('📊 Student Info:', studentInfo);
+            console.log('📚 Selected Courses:', selectedCourses);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('❌ Registration failed:', error);
+        alert(currentLanguage === 'th' 
+            ? '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message 
+            : '❌ Error saving data: ' + error.message);
+    } finally {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
 }
 
 // Reset the form for a new registration
 function resetForm() {
-  // Reset form fields
-  studentInfoForm.reset();
-  
-  // Reset selected courses
-  selectedCourses = [];
-  
-  // Reset progress bar
-  progressBar.style.width = '50%';
-  
-  // Go back to page 1
-  successMessage.style.display = 'none';
-  page1.classList.add('active');
+    // Reset form fields
+    studentInfoForm.reset();
+    
+    // Reset selected courses
+    selectedCourses = [];
+    
+    // Reset progress bar
+    progressBar.style.width = '50%';
+    
+    // Go back to page 1
+    successMessage.style.display = 'none';
+    page1.classList.add('active');
+    
+    // Reset UI
+    updateSelectedCoursesList();
 }
