@@ -173,4 +173,461 @@ async function saveToFirebase(studentInfo, selectedCourses) {
                 status: 'active'
             });
             
-            console.log('✅ Data saved to Firebase with ID:',
+            console.log('✅ Data saved to Firebase with ID:', docRef.id);
+            resolve({ success: true, id: docRef.id });
+        } catch (error) {
+            console.error('❌ Error saving to Firebase:', error);
+            reject(error);
+        }
+    });
+}
+
+// ตรวจสอบรหัสนักศึกษาซ้ำ
+async function checkDuplicateStudent(studentId) {
+    if (!firebaseInitialized) {
+        return false; // ในโหมด demo ให้ผ่านตลอด
+    }
+
+    try {
+        const db = firebase.firestore();
+        const snapshot = await db.collection('registrations')
+            .where('studentId', '==', studentId)
+            .where('status', '==', 'active')
+            .get();
+        
+        return !snapshot.empty;
+    } catch (error) {
+        console.error('Error checking duplicate:', error);
+        return false;
+    }
+}
+
+// Main Functions
+function initializeLanguageSwitcher() {
+    const langButtons = document.querySelectorAll('.lang-btn');
+    langButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            switchLanguage(lang);
+            langButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+function switchLanguage(lang) {
+    currentLanguage = lang;
+    const elements = document.querySelectorAll('[data-i18n]');
+    elements.forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+            element.textContent = translations[lang][key];
+        }
+    });
+}
+
+function initializeEventListeners() {
+    studentInfoForm.addEventListener('submit', handleFormSubmit);
+    document.getElementById('backBtn').addEventListener('click', goToPage1);
+    document.getElementById('submitBtn').addEventListener('click', handleRegistration);
+    document.getElementById('newRegistrationBtn').addEventListener('click', resetForm);
+    document.getElementById('retryBtn').addEventListener('click', retryRegistration);
+
+    const formInputs = studentInfoForm.querySelectorAll('input, select');
+    formInputs.forEach(input => {
+        input.addEventListener('blur', validateField);
+        input.addEventListener('input', clearFieldError);
+    });
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    if (await validateForm()) {
+        studentData = {
+            firstName: document.getElementById('fname').value.trim(),
+            lastName: document.getElementById('lname').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            studentId: document.getElementById('studentId').value.trim(),
+            track: document.getElementById('track').value,
+            year: document.getElementById('year').value,
+            term: document.getElementById('term').value
+        };
+        
+        const trackName = document.getElementById('track').options[document.getElementById('track').selectedIndex].text;
+        displayTrack.textContent = trackName;
+        generateCourseList(studentData.track);
+        goToPage2();
+    }
+}
+
+async function validateForm() {
+    let isValid = true;
+    
+    // Reset error messages
+    document.querySelectorAll('.field-error').forEach(error => {
+        error.style.display = 'none';
+    });
+
+    // Validate first name
+    const fname = document.getElementById('fname');
+    if (!fname.value.trim()) {
+        document.getElementById('fname-error').style.display = 'block';
+        isValid = false;
+    }
+
+    // Validate last name
+    const lname = document.getElementById('lname');
+    if (!lname.value.trim()) {
+        document.getElementById('lname-error').style.display = 'block';
+        isValid = false;
+    }
+
+    // Validate email
+    const email = document.getElementById('email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim() || !emailRegex.test(email.value)) {
+        document.getElementById('email-error').style.display = 'block';
+        isValid = false;
+    }
+
+    // Validate student ID
+    const studentId = document.getElementById('studentId');
+    if (!studentId.value.trim()) {
+        document.getElementById('studentId-error').style.display = 'block';
+        isValid = false;
+    } else {
+        // Check for duplicate student ID
+        const isDuplicate = await checkDuplicateStudent(studentId.value.trim());
+        if (isDuplicate) {
+            const errorElement = document.getElementById('studentId-error');
+            errorElement.textContent = currentLanguage === 'th' 
+                ? 'รหัสนักศึกษานี้ได้ลงทะเบียนไว้แล้ว' 
+                : 'This student ID is already registered';
+            errorElement.style.display = 'block';
+            isValid = false;
+        }
+    }
+
+    // Validate track
+    const track = document.getElementById('track');
+    if (!track.value) {
+        document.getElementById('track-error').style.display = 'block';
+        isValid = false;
+    }
+
+    // Validate year
+    const year = document.getElementById('year');
+    if (!year.value) {
+        document.getElementById('year-error').style.display = 'block';
+        isValid = false;
+    }
+
+    // Validate term
+    const term = document.getElementById('term');
+    if (!term.value) {
+        document.getElementById('term-error').style.display = 'block';
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+function validateField(e) {
+    const field = e.target;
+    const fieldId = field.id;
+    const errorId = `${fieldId}-error`;
+    
+    if (validateFieldById(fieldId)) {
+        clearFieldErrorById(fieldId, errorId);
+    } else {
+        showFieldError(fieldId, errorId);
+    }
+}
+
+function validateFieldById(fieldId) {
+    const field = document.getElementById(fieldId);
+    const value = field.value.trim();
+    
+    switch(fieldId) {
+        case 'fname':
+        case 'lname':
+            return value.length >= 2;
+        case 'email':
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        case 'studentId':
+            return value.length >= 5;
+        case 'track':
+        case 'year':
+        case 'term':
+            return value !== '';
+        default:
+            return true;
+    }
+}
+
+function showFieldError(fieldId, errorId) {
+    const field = document.getElementById(fieldId);
+    const error = document.getElementById(errorId);
+    field.classList.add('error');
+    error.style.display = 'block';
+}
+
+function clearFieldError(e) {
+    const field = e.target;
+    const fieldId = field.id;
+    const errorId = `${fieldId}-error`;
+    clearFieldErrorById(fieldId, errorId);
+}
+
+function clearFieldErrorById(fieldId, errorId) {
+    const field = document.getElementById(fieldId);
+    const error = document.getElementById(errorId);
+    field.classList.remove('error');
+    error.style.display = 'none';
+}
+
+function generateCourseList(track) {
+    const courses = courseData[track] || [];
+    courseList.innerHTML = '';
+    
+    if (courses.length === 0) {
+        courseList.innerHTML = '<p class="text-center text-muted">ไม่มีวิชาในสาขานี้</p>';
+        return;
+    }
+    
+    courses.forEach(course => {
+        const courseCard = document.createElement('div');
+        courseCard.className = 'course-card';
+        courseCard.setAttribute('data-course-id', course.id);
+        
+        const isSelected = selectedCourses.some(c => c.id === course.id);
+        if (isSelected) {
+            courseCard.classList.add('selected');
+        }
+        
+        let prerequisiteText = '';
+        if (course.prerequisite) {
+            prerequisiteText = currentLanguage === 'th' 
+                ? `วิชาบังคับก่อนเรียน: ${course.prerequisite}`
+                : `Prerequisite: ${course.prerequisite}`;
+        } else {
+            prerequisiteText = currentLanguage === 'th' 
+                ? 'ไม่มีวิชาบังคับก่อนเรียน'
+                : 'No prerequisite';
+        }
+        
+        courseCard.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="course-checkbox ${isSelected ? 'checked' : ''}">
+                    <i class="fas fa-check" style="${isSelected ? 'display: block;' : 'display: none;'}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0 course-code">${course.id}</h6>
+                        <span class="badge bg-primary">${course.credits} หน่วยกิต</span>
+                    </div>
+                    <h6 class="mb-2">${course.name}</h6>
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-info-circle me-1"></i>
+                        ${prerequisiteText}
+                    </p>
+                </div>
+            </div>
+        `;
+        
+        courseCard.addEventListener('click', () => toggleCourseSelection(course));
+        courseList.appendChild(courseCard);
+    });
+}
+
+function toggleCourseSelection(course) {
+    const courseCard = document.querySelector(`[data-course-id="${course.id}"]`);
+    const checkbox = courseCard.querySelector('.course-checkbox');
+    const checkIcon = courseCard.querySelector('.fa-check');
+    
+    const courseIndex = selectedCourses.findIndex(c => c.id === course.id);
+    
+    if (courseIndex === -1) {
+        if (selectedCourses.length >= 7) {
+            alert(currentLanguage === 'th' 
+                ? 'คุณเลือกวิชาครบจำนวนสูงสุด (7 วิชา) แล้ว' 
+                : 'You have reached the maximum number of courses (7)');
+            return;
+        }
+        
+        if (totalCredits + course.credits > 21) {
+            alert(currentLanguage === 'th' 
+                ? 'หน่วยกิตรวมเกินกำหนด (21 หน่วยกิต)' 
+                : 'Total credits exceed the limit (21 credits)');
+            return;
+        }
+        
+        selectedCourses.push(course);
+        courseCard.classList.add('selected');
+        checkbox.classList.add('checked');
+        checkIcon.style.display = 'block';
+        totalCredits += course.credits;
+    } else {
+        selectedCourses.splice(courseIndex, 1);
+        courseCard.classList.remove('selected');
+        checkbox.classList.remove('checked');
+        checkIcon.style.display = 'none';
+        totalCredits -= course.credits;
+    }
+    
+    updateSelectedCoursesList();
+    updateSubmitButton();
+}
+
+function updateSelectedCoursesList() {
+    selectedCoursesList.innerHTML = '';
+    
+    if (selectedCourses.length === 0) {
+        selectedCoursesList.innerHTML = '<li class="text-muted">' + 
+            (currentLanguage === 'th' ? 'ยังไม่ได้เลือกวิชา' : 'No courses selected') + 
+            '</li>';
+    } else {
+        selectedCourses.forEach(course => {
+            const listItem = document.createElement('li');
+            listItem.className = 'selected-course-item';
+            listItem.innerHTML = `
+                <div>
+                    <strong class="course-code">${course.id}</strong> - ${course.name}
+                </div>
+                <span class="course-badge">${course.credits} หน่วยกิต</span>
+            `;
+            selectedCoursesList.appendChild(listItem);
+        });
+    }
+    
+    totalCreditsEl.textContent = totalCredits;
+    totalCoursesEl.textContent = selectedCourses.length;
+}
+
+function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    if (selectedCourses.length > 0) {
+        submitBtn.innerHTML = `
+            <span data-i18n="submit_button">ยืนยันการลงทะเบียน</span>
+            <small class="ms-2">(${selectedCourses.length} วิชา, ${totalCredits} หน่วยกิต)</small>
+            <i class="fas fa-check ms-2"></i>
+        `;
+    } else {
+        submitBtn.innerHTML = `
+            <span data-i18n="submit_button">ยืนยันการลงทะเบียน</span>
+            <i class="fas fa-check ms-2"></i>
+        `;
+    }
+    
+    const submitText = submitBtn.querySelector('[data-i18n="submit_button"]');
+    if (submitText && translations[currentLanguage]) {
+        submitText.textContent = translations[currentLanguage].submit_button;
+    }
+}
+
+function goToPage2() {
+    page1.classList.remove('active');
+    page2.classList.add('active');
+    progressBar.style.width = '100%';
+    progressBar.setAttribute('aria-valuenow', '100');
+}
+
+function goToPage1() {
+    page2.classList.remove('active');
+    page1.classList.add('active');
+    progressBar.style.width = '50%';
+    progressBar.setAttribute('aria-valuenow', '50');
+}
+
+async function handleRegistration() {
+    if (selectedCourses.length === 0) {
+        alert(currentLanguage === 'th' 
+            ? 'กรุณาเลือกอย่างน้อย 1 วิชา' 
+            : 'Please select at least 1 course');
+        return;
+    }
+    
+    showLoading(true);
+    
+    try {
+        const result = await saveToFirebase(studentData, selectedCourses);
+        
+        if (result.success) {
+            showSuccessMessage();
+            console.log('🎉 Registration successful! ID:', result.id);
+        } else {
+            throw new Error('Failed to save data');
+        }
+    } catch (error) {
+        showErrorMessage(error.message || 'ไม่สามารถบันทึกข้อมูลได้');
+        console.error('❌ Registration failed:', error);
+    } finally {
+        showLoading(false);
+    }
+}
+
+function retryRegistration() {
+    errorMessage.style.display = 'none';
+    handleRegistration();
+}
+
+function showLoading(show) {
+    if (show) {
+        loadingOverlay.style.display = 'flex';
+        const submitBtn = document.getElementById('submitBtn');
+        const originalHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = `
+            <i class="fas fa-spinner fa-spin me-2"></i>
+            <span>${translations[currentLanguage].saving_data}</span>
+        `;
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('data-original-html', originalHTML);
+    } else {
+        loadingOverlay.style.display = 'none';
+        const submitBtn = document.getElementById('submitBtn');
+        const originalHTML = submitBtn.getAttribute('data-original-html');
+        if (originalHTML) {
+            submitBtn.innerHTML = originalHTML;
+            submitBtn.removeAttribute('data-original-html');
+        }
+        submitBtn.disabled = false;
+    }
+}
+
+function showSuccessMessage() {
+    page2.classList.remove('active');
+    successMessage.style.display = 'block';
+    errorMessage.style.display = 'none';
+}
+
+function showErrorMessage(errorDetails) {
+    page2.classList.remove('active');
+    successMessage.style.display = 'none';
+    errorMessage.style.display = 'block';
+    
+    const errorDetailsEl = document.getElementById('error-details');
+    if (errorDetailsEl) {
+        errorDetailsEl.textContent = errorDetails;
+    }
+}
+
+function resetForm() {
+    studentInfoForm.reset();
+    studentData = {};
+    selectedCourses = [];
+    totalCredits = 0;
+    
+    successMessage.style.display = 'none';
+    errorMessage.style.display = 'none';
+    page1.classList.add('active');
+    progressBar.style.width = '50%';
+    progressBar.setAttribute('aria-valuenow', '50');
+    
+    const errors = document.querySelectorAll('.field-error');
+    errors.forEach(error => error.style.display = 'none');
+    
+    const errorFields = document.querySelectorAll('.error');
+    errorFields.forEach(field => field.classList.remove('error'));
+    
+    updateSubmitButton();
+}
