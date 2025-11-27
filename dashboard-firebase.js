@@ -3,7 +3,10 @@ class FirebaseDashboard {
     constructor() {
         this.db = firebase.firestore();
         this.registrations = [];
+        this.filteredRegistrations = [];
         this.trackChart = null;
+        this.isRealTime = true;
+        this.realTimeListener = null;
         this.init();
     }
 
@@ -20,6 +23,9 @@ class FirebaseDashboard {
             // อัพเดท UI
             this.updateUI();
             
+            // ตั้งค่า Event Listeners
+            this.setupEventListeners();
+            
             console.log('✅ Dashboard initialized successfully');
         } catch (error) {
             console.error('❌ Dashboard initialization failed:', error);
@@ -27,8 +33,48 @@ class FirebaseDashboard {
         }
     }
 
+    setupEventListeners() {
+        // Refresh button
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            this.loadData();
+        });
+
+        // Search and filter
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            this.filterStudents();
+        });
+
+        document.getElementById('track-filter').addEventListener('change', () => {
+            this.filterStudents();
+        });
+
+        document.getElementById('year-filter').addEventListener('change', () => {
+            this.filterStudents();
+        });
+
+        // Real-time toggle
+        document.getElementById('real-time-toggle').addEventListener('change', (e) => {
+            this.toggleRealTime(e.target.checked);
+        });
+
+        // Export buttons
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+            this.exportToJSON();
+        });
+
+        document.getElementById('export-csv-btn').addEventListener('click', () => {
+            this.exportToCSV();
+        });
+
+        document.getElementById('print-btn').addEventListener('click', () => {
+            this.printData();
+        });
+    }
+
     async loadData() {
         try {
+            this.showLoading(true);
+            
             const snapshot = await this.db.collection('registrations')
                 .where('status', '==', 'active')
                 .orderBy('registrationDate', 'desc')
@@ -39,27 +85,80 @@ class FirebaseDashboard {
                 ...doc.data()
             }));
             
+            this.filteredRegistrations = [...this.registrations];
+            
             console.log('📊 Loaded', this.registrations.length, 'registrations');
+            this.showLoading(false);
         } catch (error) {
             console.error('Error loading data:', error);
-            throw error;
+            this.showLoading(false);
+            this.showError('ไม่สามารถโหลดข้อมูลได้: ' + error.message);
         }
     }
 
     setupRealTimeListener() {
-        this.db.collection('registrations')
+        if (this.realTimeListener) {
+            this.realTimeListener(); // ยกเลิก listener เดิม
+        }
+
+        this.realTimeListener = this.db.collection('registrations')
             .where('status', '==', 'active')
             .orderBy('registrationDate', 'desc')
             .onSnapshot(snapshot => {
+                if (!this.isRealTime) return;
+                
                 console.log('🔄 Real-time update received');
                 this.registrations = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                
+                // กรองข้อมูลใหม่เมื่อมีอัพเดท
+                this.filterStudents();
                 this.updateUI();
             }, error => {
                 console.error('Real-time listener error:', error);
+                this.showError('การเชื่อมต่อ Real-time ผิดพลาด: ' + error.message);
             });
+    }
+
+    toggleRealTime(enabled) {
+        this.isRealTime = enabled;
+        if (enabled) {
+            this.setupRealTimeListener();
+            this.showNotification('เปิดใช้งาน Real-time แล้ว', 'success');
+        } else {
+            if (this.realTimeListener) {
+                this.realTimeListener();
+                this.realTimeListener = null;
+            }
+            this.showNotification('ปิดใช้งาน Real-time แล้ว', 'warning');
+        }
+    }
+
+    filterStudents() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const trackValue = document.getElementById('track-filter').value;
+        const yearValue = document.getElementById('year-filter').value;
+        
+        this.filteredRegistrations = this.registrations.filter(student => {
+            // กรองด้วยคำค้นหา
+            const matchesSearch = !searchTerm || 
+                student.studentId?.toLowerCase().includes(searchTerm) ||
+                student.firstName?.toLowerCase().includes(searchTerm) ||
+                student.lastName?.toLowerCase().includes(searchTerm) ||
+                student.email?.toLowerCase().includes(searchTerm);
+
+            // กรองด้วยสาขาวิชา
+            const matchesTrack = !trackValue || student.track === trackValue;
+
+            // กรองด้วยชั้นปี
+            const matchesYear = !yearValue || student.year?.toString() === yearValue;
+
+            return matchesSearch && matchesTrack && matchesYear;
+        });
+
+        this.updateUI();
     }
 
     updateUI() {
@@ -71,15 +170,15 @@ class FirebaseDashboard {
     }
 
     updateStatistics() {
-        const totalStudents = this.registrations.length;
-        const totalCourses = this.registrations.reduce((sum, student) => 
+        const totalStudents = this.filteredRegistrations.length;
+        const totalCourses = this.filteredRegistrations.reduce((sum, student) => 
             sum + (student.courses ? student.courses.length : 0), 0
         );
 
         const trackCounts = {
-            software: this.registrations.filter(s => s.track === 'software').length,
-            data: this.registrations.filter(s => s.track === 'data').length,
-            network: this.registrations.filter(s => s.track === 'network').length
+            software: this.filteredRegistrations.filter(s => s.track === 'software').length,
+            data: this.filteredRegistrations.filter(s => s.track === 'data').length,
+            network: this.filteredRegistrations.filter(s => s.track === 'network').length
         };
 
         // อัพเดท UI
@@ -93,42 +192,62 @@ class FirebaseDashboard {
     renderStudentsTable() {
         const tbody = document.getElementById('students-tbody');
         
-        if (this.registrations.length === 0) {
+        if (this.filteredRegistrations.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        📝 ยังไม่มีข้อมูลการลงทะเบียน
+                    <td colspan="7" class="text-center text-muted py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-search fa-2x mb-3"></i>
+                            <h5>ไม่พบข้อมูลนักศึกษา</h5>
+                            <p class="text-muted">ลองเปลี่ยนคำค้นหาหรือตัวกรองดูนะคะ</p>
+                        </div>
                     </td>
                 </tr>
             `;
             return;
         }
 
-        tbody.innerHTML = this.registrations.map((student) => `
+        tbody.innerHTML = this.filteredRegistrations.map((student) => `
             <tr>
                 <td><strong>${student.studentId || 'ไม่มีข้อมูล'}</strong></td>
-                <td>${student.firstName} ${student.lastName}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-placeholder bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                            <i class="fas fa-user text-muted"></i>
+                        </div>
+                        <div>
+                            <div>${student.firstName} ${student.lastName}</div>
+                            <small class="text-muted">${student.email || 'ไม่มีอีเมล'}</small>
+                        </div>
+                    </div>
+                </td>
                 <td>
                     <span class="badge ${this.getTrackBadgeClass(student.track)}">
                         ${this.getTrackName(student.track)}
                     </span>
                 </td>
-                <td>ปี ${student.year}</td>
                 <td>
-                    <span class="badge bg-success">${student.courses ? student.courses.length : 0} วิชา</span>
+                    <span class="badge bg-light text-dark">ปี ${student.year}</span>
                 </td>
-                <td>${this.formatDate(student.registrationDate)}</td>
+                <td>
+                    <span class="badge bg-success">
+                        ${student.courses ? student.courses.length : 0} วิชา
+                    </span>
+                </td>
+                <td>
+                    <small>${this.formatDate(student.registrationDate)}</small>
+                </td>
                 <td>
                     <div class="btn-group">
                         <button class="btn btn-sm btn-outline-primary btn-action" 
                                 onclick="firebaseDashboard.viewStudentDetails('${student.id}')"
                                 title="ดูรายละเอียด">
-                            👁️
+                            <i class="fas fa-eye"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger btn-action" 
                                 onclick="firebaseDashboard.deleteStudent('${student.id}')"
                                 title="ลบข้อมูล">
-                            🗑️
+                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </td>
@@ -141,14 +260,25 @@ class FirebaseDashboard {
         if (!ctx) return;
 
         const trackCounts = {
-            software: this.registrations.filter(s => s.track === 'software').length,
-            data: this.registrations.filter(s => s.track === 'data').length,
-            network: this.registrations.filter(s => s.track === 'network').length
+            software: this.filteredRegistrations.filter(s => s.track === 'software').length,
+            data: this.filteredRegistrations.filter(s => s.track === 'data').length,
+            network: this.filteredRegistrations.filter(s => s.track === 'network').length
         };
 
         // ทำลาย chart เดิมถ้ามี
         if (this.trackChart) {
             this.trackChart.destroy();
+        }
+
+        // ถ้าไม่มีข้อมูลให้แสดงข้อความแทน
+        if (this.filteredRegistrations.length === 0) {
+            ctx.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-chart-pie fa-2x mb-2"></i>
+                    <p>ไม่มีข้อมูลสำหรับแสดงแผนภูมิ</p>
+                </div>
+            `;
+            return;
         }
 
         this.trackChart = new Chart(ctx, {
@@ -157,22 +287,39 @@ class FirebaseDashboard {
                 labels: ['วิศวกรรมซอฟต์แวร์', 'วิทยาศาสตร์ข้อมูล', 'เครือข่ายและความปลอดภัย'],
                 datasets: [{
                     data: [trackCounts.software, trackCounts.data, trackCounts.network],
-                    backgroundColor: ['#0d6efd', '#198754', '#ffc107'],
+                    backgroundColor: ['#4361ee', '#4895ef', '#f72585'],
                     borderWidth: 2,
-                    borderColor: '#fff'
+                    borderColor: '#fff',
+                    hoverOffset: 8
                 }]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
                             padding: 20,
-                            usePointStyle: true
+                            usePointStyle: true,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} คน (${percentage}%)`;
+                            }
                         }
                     }
-                }
+                },
+                cutout: '60%'
             }
         });
     }
@@ -182,7 +329,7 @@ class FirebaseDashboard {
         if (!container) return;
 
         const courseCounts = {};
-        this.registrations.forEach(student => {
+        this.filteredRegistrations.forEach(student => {
             if (student.courses) {
                 student.courses.forEach(course => {
                     courseCounts[course.name] = (courseCounts[course.name] || 0) + 1;
@@ -195,17 +342,26 @@ class FirebaseDashboard {
             .slice(0, 5);
 
         if (popularCourses.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">ยังไม่มีข้อมูลวิชาที่ลงทะเบียน</p>';
+            container.innerHTML = `
+                <div class="empty-state py-3">
+                    <i class="fas fa-book-open fa-lg mb-2"></i>
+                    <p class="text-muted mb-0">ยังไม่มีข้อมูลวิชาที่ลงทะเบียน</p>
+                </div>
+            `;
             return;
         }
 
         container.innerHTML = popularCourses.map(([courseName, count], index) => `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-primary me-2">${index + 1}</span>
-                    <span class="text-truncate" title="${courseName}">${courseName}</span>
+            <div class="recent-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="badge ${this.getRankBadgeClass(index)} me-2">${index + 1}</span>
+                        <div class="course-name text-truncate" style="max-width: 180px;" title="${courseName}">
+                            ${courseName}
+                        </div>
+                    </div>
+                    <span class="badge bg-success">${count}</span>
                 </div>
-                <span class="badge bg-success">${count} คน</span>
             </div>
         `).join('');
     }
@@ -214,22 +370,29 @@ class FirebaseDashboard {
         const container = document.getElementById('recent-registrations');
         if (!container) return;
 
-        const recent = this.registrations.slice(0, 3);
+        const recent = this.filteredRegistrations.slice(0, 3);
 
         if (recent.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center">ยังไม่มีข้อมูล</p>';
+            container.innerHTML = `
+                <div class="empty-state py-3">
+                    <i class="fas fa-clock fa-lg mb-2"></i>
+                    <p class="text-muted mb-0">ยังไม่มีข้อมูลการลงทะเบียน</p>
+                </div>
+            `;
             return;
         }
 
         container.innerHTML = recent.map(student => `
-            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
-                <div>
-                    <div class="fw-semibold">${student.firstName} ${student.lastName}</div>
-                    <small class="text-muted">${this.formatTimeAgo(student.registrationDate)}</small>
+            <div class="recent-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold">${student.firstName} ${student.lastName}</div>
+                        <small class="text-muted">${this.formatTimeAgo(student.registrationDate)}</small>
+                    </div>
+                    <span class="badge ${this.getTrackBadgeClass(student.track)}">
+                        ${this.getTrackShortName(student.track)}
+                    </span>
                 </div>
-                <span class="badge ${this.getTrackBadgeClass(student.track)}">
-                    ${this.getTrackShortName(student.track)}
-                </span>
             </div>
         `).join('');
     }
@@ -245,7 +408,7 @@ class FirebaseDashboard {
             new bootstrap.Modal(document.getElementById('studentModal')).show();
         } catch (error) {
             console.error('Error loading student details:', error);
-            alert('ไม่สามารถโหลดข้อมูลนักศึกษาได้: ' + error.message);
+            this.showError('ไม่สามารถโหลดข้อมูลนักศึกษาได้: ' + error.message);
         }
     }
 
@@ -253,30 +416,43 @@ class FirebaseDashboard {
         const totalCredits = student.courses ? 
             student.courses.reduce((sum, course) => sum + course.credits, 0) : 0;
         
-        return `
-            <div class="student-detail-item">
-                <h6>📋 ข้อมูลส่วนตัว</h6>
-                <p><strong>รหัสนักศึกษา:</strong> ${student.studentId}</p>
-                <p><strong>ชื่อ-นามสกุล:</strong> ${student.firstName} ${student.lastName}</p>
-                <p><strong>อีเมล:</strong> ${student.email}</p>
-                <p><strong>สาขาวิชา:</strong> <span class="badge ${this.getTrackBadgeClass(student.track)}">${this.getTrackName(student.track)}</span></p>
-                <p><strong>ชั้นปี:</strong> ปี ${student.year}</p>
-                <p><strong>ภาคเรียน:</strong> ภาคเรียนที่ ${student.term}</p>
-                <p><strong>วันที่ลงทะเบียน:</strong> ${this.formatDate(student.registrationDate)}</p>
+        const coursesHTML = student.courses ? student.courses.map(course => `
+            <div class="course-badge">
+                <strong>${course.name}</strong>
+                <br>
+                <small class="text-muted">${course.credits} หน่วยกิต</small>
             </div>
-            <div class="student-detail-item">
-                <h6>📚 วิชาที่ลงทะเบียน (${student.courses ? student.courses.length : 0} วิชา)</h6>
-                <div>
-                    ${student.courses ? student.courses.map(course => `
-                        <span class="course-badge">
-                            ${course.name} (${course.credits} หน่วยกิต)
-                        </span>
-                    `).join('') : 'ไม่มีข้อมูลวิชา'}
+        `).join('') : '<p class="text-muted">ไม่มีวิชาที่ลงทะเบียน</p>';
+
+        return `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="student-detail-item">
+                        <h6><i class="fas fa-id-card me-2"></i>ข้อมูลส่วนตัว</h6>
+                        <p><strong>รหัสนักศึกษา:</strong> ${student.studentId || 'ไม่มีข้อมูล'}</p>
+                        <p><strong>ชื่อ-นามสกุล:</strong> ${student.firstName} ${student.lastName}</p>
+                        <p><strong>อีเมล:</strong> ${student.email || 'ไม่มีข้อมูล'}</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="student-detail-item">
+                        <h6><i class="fas fa-graduation-cap me-2"></i>ข้อมูลการศึกษา</h6>
+                        <p><strong>สาขาวิชา:</strong> <span class="badge ${this.getTrackBadgeClass(student.track)}">${this.getTrackName(student.track)}</span></p>
+                        <p><strong>ชั้นปี:</strong> ปี ${student.year}</p>
+                        <p><strong>ภาคเรียน:</strong> ภาคเรียนที่ ${student.term}</p>
+                        <p><strong>วันที่ลงทะเบียน:</strong> ${this.formatDate(student.registrationDate)}</p>
+                    </div>
                 </div>
             </div>
             <div class="student-detail-item">
-                <h6>🧮 หน่วยกิตรวม</h6>
-                <p class="fw-bold text-primary fs-4">
+                <h6><i class="fas fa-book me-2"></i>วิชาที่ลงทะเบียน (${student.courses ? student.courses.length : 0} วิชา)</h6>
+                <div class="courses-grid">
+                    ${coursesHTML}
+                </div>
+            </div>
+            <div class="student-detail-item">
+                <h6><i class="fas fa-calculator me-2"></i>หน่วยกิตรวม</h6>
+                <p class="fw-bold text-primary fs-3 text-center">
                     ${totalCredits} หน่วยกิต
                 </p>
             </div>
@@ -294,10 +470,11 @@ class FirebaseDashboard {
                 deletedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             
+            this.showNotification('ลบข้อมูลนักศึกษาเรียบร้อยแล้ว', 'success');
             console.log('✅ Student deleted successfully');
         } catch (error) {
             console.error('Error deleting student:', error);
-            alert('เกิดข้อผิดพลาดในการลบข้อมูล: ' + error.message);
+            this.showError('เกิดข้อผิดพลาดในการลบข้อมูล: ' + error.message);
         }
     }
 
@@ -305,8 +482,8 @@ class FirebaseDashboard {
     exportToJSON() {
         const data = {
             exportDate: new Date().toISOString(),
-            totalStudents: this.registrations.length,
-            registrations: this.registrations
+            totalStudents: this.filteredRegistrations.length,
+            registrations: this.filteredRegistrations
         };
         
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -316,20 +493,22 @@ class FirebaseDashboard {
         a.download = `student-registrations-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        
+        this.showNotification('ส่งออกข้อมูล JSON เรียบร้อยแล้ว', 'success');
     }
 
     exportToCSV() {
         const headers = ['รหัสนักศึกษา', 'ชื่อ', 'นามสกุล', 'อีเมล', 'สาขาวิชา', 'ชั้นปี', 'ภาคเรียน', 'จำนวนวิชา', 'หน่วยกิตรวม', 'วันที่ลงทะเบียน'];
         
-        const csvData = this.registrations.map(student => {
+        const csvData = this.filteredRegistrations.map(student => {
             const totalCredits = student.courses ? 
                 student.courses.reduce((sum, course) => sum + course.credits, 0) : 0;
             
             return [
-                student.studentId,
+                student.studentId || '',
                 student.firstName,
                 student.lastName,
-                student.email,
+                student.email || '',
                 this.getTrackName(student.track),
                 student.year,
                 student.term,
@@ -350,6 +529,8 @@ class FirebaseDashboard {
         a.download = `student-registrations-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
+        
+        this.showNotification('ส่งออกข้อมูล CSV เรียบร้อยแล้ว', 'success');
     }
 
     printData() {
@@ -377,11 +558,16 @@ class FirebaseDashboard {
 
     getTrackBadgeClass(track) {
         const classes = {
-            software: 'bg-primary',
-            data: 'bg-success',
-            network: 'bg-warning text-dark'
+            software: 'badge-software',
+            data: 'badge-data',
+            network: 'badge-network'
         };
         return classes[track] || 'bg-secondary';
+    }
+
+    getRankBadgeClass(rank) {
+        const classes = ['bg-danger', 'bg-warning', 'bg-info', 'bg-primary', 'bg-secondary'];
+        return classes[rank] || 'bg-secondary';
     }
 
     formatDate(timestamp) {
@@ -412,14 +598,62 @@ class FirebaseDashboard {
         return this.formatDate(timestamp);
     }
 
+    showLoading(show) {
+        const tbody = document.getElementById('students-tbody');
+        if (show) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="loading-spinner mb-2"></div>
+                        <p class="text-muted mb-0">กำลังโหลดข้อมูล...</p>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
     showError(message) {
         const alertDiv = document.createElement('div');
         alertDiv.className = 'alert alert-danger alert-dismissible fade show';
         alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         document.querySelector('.container-fluid').prepend(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    showNotification(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${this.getNotificationIcon(type)} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-fluid').prepend(alertDiv);
+        
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+
+    getNotificationIcon(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-triangle',
+            warning: 'exclamation-triangle',
+            info: 'info-circle'
+        };
+        return icons[type] || 'info-circle';
     }
 }
 
@@ -429,12 +663,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // ตรวจสอบว่า Firebase พร้อม
     if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
         firebaseDashboard = new FirebaseDashboard();
+        window.firebaseDashboard = firebaseDashboard; // ทำให้สามารถเรียกใช้จาก global scope ได้
     } else {
         console.error('Firebase not initialized');
         document.getElementById('students-tbody').innerHTML = `
             <tr>
                 <td colspan="7" class="text-center text-danger py-4">
-                    ❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <h5>ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้</h5>
+                    <p class="text-muted">กรุณาตรวจสอบการตั้งค่า Firebase</p>
                 </td>
             </tr>
         `;
