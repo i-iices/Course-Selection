@@ -232,7 +232,17 @@ function initializeEventListeners() {
     document.getElementById('submitBtn').addEventListener('click', handleRegistration);
     document.getElementById('newRegistrationBtn').addEventListener('click', resetForm);
     document.getElementById('retryBtn').addEventListener('click', retryRegistration);
-
+    document.getElementById('viewDashboardBtn')?.addEventListener('click', function(e) {
+        if (selectedCourses.length > 0) {return true;
+        } else {
+            e.preventDefault();
+            alert(currentLanguage === 'th' 
+                ? 'กรุณาลงทะเบียนให้เสร็จก่อน' 
+                : 'Please complete registration first');
+            return false;
+        }
+    });
+        
     const formInputs = studentInfoForm.querySelectorAll('input, select');
     formInputs.forEach(input => {
         input.addEventListener('blur', validateField);
