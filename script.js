@@ -1,3 +1,19 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAIPiP2AxHNE87milCT62BUkd8IianrndI",
+    authDomain: "course-selection-lbc2d.firebaseapp.com",
+    projectId: "course-selection-lbc2d",
+    storageBucket: "course-selection-lbc2d.firebasestorage.app",
+    messagingSenderId: "163316202036",
+    appId: "1:163316202036:web:cddf023b85lba508f52861",
+    measurementId: "G-7GRSH87NN1"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+console.log("Firebase connected!");
+
 // Course data by track
 const courseData = {
     software: [
