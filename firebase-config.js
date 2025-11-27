@@ -31,3 +31,4 @@ try {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { firebaseConfig, firebaseInitialized };
 }
+window.firebaseInitialized = firebaseInitialized;
