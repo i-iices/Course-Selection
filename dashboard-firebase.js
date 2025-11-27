@@ -661,9 +661,9 @@ class FirebaseDashboard {
 let firebaseDashboard;
 document.addEventListener('DOMContentLoaded', function() {
     // ตรวจสอบว่า Firebase พร้อม
-    if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+    if (typeof firebase !== 'undefined' && firebase.apps.length > 0 && window.firebaseInitialized) {
         firebaseDashboard = new FirebaseDashboard();
-        window.firebaseDashboard = firebaseDashboard; // ทำให้สามารถเรียกใช้จาก global scope ได้
+        window.firebaseDashboard = firebaseDashboard;
     } else {
         console.error('Firebase not initialized');
         document.getElementById('students-tbody').innerHTML = `
@@ -672,6 +672,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
                     <h5>ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้</h5>
                     <p class="text-muted">กรุณาตรวจสอบการตั้งค่า Firebase</p>
+                    <button class="btn btn-primary mt-2" onclick="location.reload()">
+                        โหลดใหม่
+                    </button>
                 </td>
             </tr>
         `;
