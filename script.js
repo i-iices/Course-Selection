@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ตรวจสอบการเชื่อมต่อ Firebase
 function checkFirebaseConnection() {
-    if (!firebaseInitialized) {
+    if (!window.firebaseInitialized) {
         console.warn('⚠️ Firebase is not initialized. Using demo mode.');
         showNotification('⚠️ ระบบกำลังทำงานในโหมดทดสอบ (Firebase ไม่ได้เชื่อมต่อ)', 'warning');
     }
@@ -146,7 +146,7 @@ function showNotification(message, type = 'info') {
 // Firebase Functions
 async function saveToFirebase(studentInfo, selectedCourses) {
     return new Promise(async (resolve, reject) => {
-        if (!firebaseInitialized) {
+        if (!window.firebaseInitialized) {
             // ถ้า Firebase ไม่ได้เชื่อมต่อ ให้จำลองการบันทึกสำเร็จ
             setTimeout(() => {
                 console.log('📝 Demo mode: Registration data would be saved to Firebase');
