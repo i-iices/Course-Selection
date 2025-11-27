@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Course Selection System - ระบบเลือกวิชา</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+  <div class="language-switcher">
+    <button id="lang-th" class="lang-btn active" data-lang="th">ไทย</button>
+    <button id="lang-en" class="lang-btn" data-lang="en">English</button>
+  </div>
+
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-10 col-xl-8">
+        <!-- Progress Bar -->
+        <div class="progress mt-4">
+          <div class="progress-bar" role="progressbar" id="progress-bar" style="width: 50%;" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        
+        <!-- Page 1: Student Information -->
+        <div class="card shadow-lg border-0 page active" id="page1">
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+              <h2 class="fw-bold text-primary mb-2" data-i18n="form_title">ข้อมูลนักศึกษา</h2>
+              <p class="text-muted" data-i18n="form_subtitle">กรอกข้อมูลนักศึกษาก่อนเลือกวิชา</p>
+            </div>
+
+            <form id="studentInfoForm" novalidate>
+              <div class="row g-3">
+                <!-- First Name & Last Name -->
+                <div class="col-md-6">
+                  <label for="fname" class="form-label fw-semibold" data-i18n="first_name">ชื่อ</label>
+                  <input id="fname" name="firstname" type="text" class="form-control form-control-lg" 
+                         placeholder="กรุณากรอกชื่อ" required>
+                  <div class="field-error text-danger small mt-1" id="fname-error">กรุณากรอกชื่อ</div>
+                </div>
+                <div class="col-md-6">
+                  <label for="lname" class="form-label fw-semibold" data-i18n="last_name">นามสกุล</label>
+                  <input id="lname" name="lastname" type="text" class="form-control form-control-lg" 
+                         placeholder="กรุณากรอกนามสกุล" required>
+                  <div class="field-error text-danger small mt-1" id="lname-error">กรุณากรอกนามสกุล</div>
+                </div>
+
+                <!-- Email -->
+                <div class="col-12">
+                  <label for="email" class="form-label fw-semibold" data-i18n="email">อีเมล</label>
+                  <input id="email" name="email" type="email" class="form-control form-control-lg" 
+                         placeholder="กรุณากรอกอีเมล" required>
+                  <div class="field-error text-danger small mt-1" id="email-error">กรุณากรอกอีเมลที่ถูกต้อง</div>
+                </div>
+
+                <!-- Student ID -->
+                <div class="col-12">
+                  <label for="studentId" class="form-label fw-semibold" data-i18n="student_id">รหัสนักศึกษา</label>
+                  <input id="studentId" name="studentId" type="text" class="form-control form-control-lg" 
+                         placeholder="กรุณากรอกรหัสนักศึกษา" required>
+                  <div class="field-error text-danger small mt-1" id="studentId-error">กรุณากรอกรหัสนักศึกษา</div>
+                </div>
+
+                <!-- Track -->
+                <div class="col-12">
+                  <label for="track" class="form-label fw-semibold" data-i18n="track_label">เลือกสาขาวิชา</label>
+                  <select id="track" name="track" class="form-select form-select-lg" required>
+                    <option value="">เลือกสาขาวิชา</option>
+                    <option value="software">วิศวกรรมซอฟต์แวร์</option>
+                    <option value="data">วิทยาศาสตร์ข้อมูล</option>
+                    <option value="network">เครือข่ายและความปลอดภัย</option>
+                  </select>
+                  <div class="field-error text-danger small mt-1" id="track-error">กรุณาเลือกสาขาวิชา</div>
+                </div>
+
+                <!-- Year & Term -->
+                <div class="col-md-6">
+                  <label for="year" class="form-label fw-semibold" data-i18n="year_label">ชั้นปี</label>
+                  <select id="year" name="year" class="form-select form-select-lg" required>
+                    <option value="">เลือกชั้นปี</option>
+                    <option value="1">ปี 1</option>
+                    <option value="2">ปี 2</option>
+                    <option value="3">ปี 3</option>
+                    <option value="4">ปี 4</option>
+                  </select>
+                  <div class="field-error text-danger small mt-1" id="year-error">กรุณาเลือกชั้นปี</div>
+                </div>
+                <div class="col-md-6">
+                  <label for="term" class="form-label fw-semibold" data-i18n="term_label">ภาคเรียน</label>
+                  <select id="term" name="term" class="form-select form-select-lg" required>
+                    <option value="">เลือกภาคเรียน</option>
+                    <option value="1">ภาคเรียนที่ 1</option>
+                    <option value="2">ภาคเรียนที่ 2</option>
+                    <option value="3">ภาคเรียนที่ 3</option>
+                  </select>
+                  <div class="field-error text-danger small mt-1" id="term-error">กรุณาเลือกภาคเรียน</div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-12 mt-4">
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" id="nextBtn">
+                      ถัดไป - เลือกวิชา
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Page 2: Course Selection -->
+        <div class="card shadow-lg border-0 page" id="page2">
+          <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+              <h2 class="fw-bold text-primary mb-2">เลือกวิชาเรียน</h2>
+              <p class="text-muted">เลือกวิชาที่ต้องการลงทะเบียนในภาคเรียนนี้</p>
+            </div>
+
+            <div class="mb-4">
+              <h5 class="mb-3">สาขาวิชา: <span id="display-track" class="text-primary">วิศวกรรมซอฟต์แวร์</span></h5>
+              <div class="alert alert-info">
+                <strong>คำแนะนำ:</strong> สามารถเลือกได้สูงสุด 7 วิชา หรือไม่เกิน 21 หน่วยกิต
+              </div>
+            </div>
+
+            <div id="course-list">
+              <!-- Course cards will be dynamically generated here -->
+            </div>
+
+            <div class="mt-4 p-3 border rounded bg-light">
+              <div class="row">
+                <div class="col-md-6">
+                  <h6>วิชาที่เลือก:</h6>
+                  <ul id="selected-courses-list" class="list-unstyled">
+                    <!-- Selected courses will appear here -->
+                  </ul>
+                </div>
+                <div class="col-md-6 text-end">
+                  <h6>หน่วยกิตรวม: <span id="total-credits" class="fw-bold">0</span></h6>
+                  <h6>จำนวนวิชา: <span id="total-courses" class="fw-bold">0</span></h6>
+                </div>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="row mt-4">
+              <div class="col-md-6">
+                <button type="button" class="btn btn-outline-primary btn-lg w-100" id="backBtn">
+                  ย้อนกลับ
+                </button>
+              </div>
+              <div class="col-md-6">
+                <button type="button" class="btn btn-primary btn-lg w-100" id="submitBtn">
+                  ยืนยันการลงทะเบียน
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div class="alert alert-success mt-4 text-center" id="successMessage" style="display: none;">
+          <h4 class="alert-heading">ลงทะเบียนสำเร็จ!</h4>
+          <p class="mb-2">ระบบได้บันทึกข้อมูลการลงทะเบียนของคุณเรียบร้อยแล้ว</p>
+          <button class="btn btn-outline-success mt-2" id="newRegistrationBtn">ลงทะเบียนใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Main Script -->
+  <script src="script.js"></script>
+</body>
+</html>
