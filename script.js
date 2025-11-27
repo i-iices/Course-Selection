@@ -184,7 +184,7 @@ async function saveToFirebase(studentInfo, selectedCourses) {
 
 // ตรวจสอบรหัสนักศึกษาซ้ำ
 async function checkDuplicateStudent(studentId) {
-    if (!firebaseInitialized) {
+    if (!window.firebaseInitialized) {
         return false; // ในโหมด demo ให้ผ่านตลอด
     }
 
