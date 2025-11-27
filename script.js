@@ -1,31 +1,25 @@
 // Course data for each track
 const courseData = {
   software: [
-    { id: 'sw101', name: 'การเขียนโปรแกรมพื้นฐาน', credits: 3, description: 'เรียนรู้พื้นฐานการเขียนโปรแกรมด้วยภาษา Python' },
-    { id: 'sw201', name: 'โครงสร้างข้อมูลและอัลกอริทึม', credits: 3, description: 'ศึกษาโครงสร้างข้อมูลและเทคนิคการออกแบบอัลกอริทึม' },
-    { id: 'sw301', name: 'การพัฒนาซอฟต์แวร์', credits: 3, description: 'เรียนรู้กระบวนการพัฒนาซอฟต์แวร์อย่างเป็นระบบ' },
-    { id: 'sw401', name: 'ฐานข้อมูล', credits: 3, description: 'ออกแบบและจัดการฐานข้อมูลเชิงสัมพันธ์' },
-    { id: 'sw501', name: 'วิศวกรรมความต้องการ', credits: 3, description: 'การรวบรวมและวิเคราะห์ความต้องการของระบบ' },
-    { id: 'sw601', name: 'การทดสอบซอฟต์แวร์', credits: 3, description: 'เทคนิคและเครื่องมือในการทดสอบซอฟต์แวร์' },
-    { id: 'sw701', name: 'โครงงานวิศวกรรมซอฟต์แวร์', credits: 3, description: 'ทำโครงงานพัฒนาซอฟต์แวร์ขนาดใหญ่' }
+    { id: 'ITE220', name: 'Web Development II(Pre:ITE222)', credits: 4 },
+    { id: 'ITE343', name: 'Mobile Application Development (Pre:ITE222)', credits: 4 },
+    { id: 'ITE365', name: 'Software Quality', credits: 4 },
+    { id: 'ITE367', name: 'Software Architecture and Modelling (Pre:ITE321)', credits: 4 },
+    { id: 'ITE368', name: 'Software Testing and Maintenance', credits: 4 },
   ],
   data: [
-    { id: 'ds101', name: 'คณิตศาสตร์สำหรับวิทยาศาสตร์ข้อมูล', credits: 3, description: 'พื้นฐานคณิตศาสตร์ที่จำเป็นสำหรับวิทยาศาสตร์ข้อมูล' },
-    { id: 'ds201', name: 'สถิติและการวิเคราะห์ข้อมูล', credits: 3, description: 'หลักการทางสถิติและการวิเคราะห์ข้อมูลเบื้องต้น' },
-    { id: 'ds301', name: 'การเรียนรู้ของเครื่อง', credits: 3, description: 'อัลกอริทึมและเทคนิคการเรียนรู้ของเครื่อง' },
-    { id: 'ds401', name: 'การประมวลผลข้อมูลขนาดใหญ่', credits: 3, description: 'เครื่องมือและเทคนิคการประมวลผลข้อมูลขนาดใหญ่' },
-    { id: 'ds501', name: 'การแสดงภาพข้อมูล', credits: 3, description: 'เทคนิคการแสดงภาพข้อมูลเพื่อการสื่อสารที่มีประสิทธิภาพ' },
-    { id: 'ds601', name: 'การทำเหมืองข้อมูล', credits: 3, description: 'เทคนิคการค้นหารูปแบบและความรู้จากข้อมูล' },
-    { id: 'ds701', name: 'โครงงานวิทยาศาสตร์ข้อมูล', credits: 3, description: 'ทำโครงงานวิเคราะห์ข้อมูลจริง' }
+    { id: 'ITE351', name: 'Programing for Data Science (Pre:ITE224)', credits: 4 },
+    { id: 'ITE352', name: 'Articial Intelligence and Machine Learning (Pre:ITE224)', credits: 4 },
+    { id: 'ITE353', name: 'Machine Learning Foundation (Pre:ITE224)', credits: 4 },
+    { id: 'ITE354', name: 'Business Intelligence and Decision Modeling (Pre:ITE224)', credits: 4 },
+    { id: 'ITE355', name: 'Data Warehousing and Data Mining (Pre:ITE224)', credits: 4 },
   ],
   network: [
-    { id: 'nt101', name: 'พื้นฐานเครือข่ายคอมพิวเตอร์', credits: 3, description: 'เรียนรู้สถาปัตยกรรมและโปรโตคอลเครือข่าย' },
-    { id: 'nt201', name: 'การบริหารเครือข่าย', credits: 3, description: 'การติดตั้งและบริหารจัดการเครือข่ายคอมพิวเตอร์' },
-    { id: 'nt301', name: 'ความปลอดภัยของข้อมูล', credits: 3, description: 'หลักการและเทคนิคการรักษาความปลอดภัยข้อมูล' },
-    { id: 'nt401', name: 'การโจมตีและการป้องกันระบบ', credits: 3, description: 'ศึกษารูปแบบการโจมตีและเทคนิคการป้องกัน' },
-    { id: 'nt501', name: 'นิติวิทยาศาสตร์ดิจิทัล', credits: 3, description: 'การสืบสวนและเก็บหลักฐานทางดิจิทัล' },
-    { id: 'nt601', name: 'เครือข่ายไร้สายและเคลื่อนที่', credits: 3, description: 'เทคโนโลยีและความปลอดภัยของเครือข่ายไร้สาย' },
-    { id: 'nt701', name: 'โครงงานความปลอดภัยเครือข่าย', credits: 3, description: 'ทำโครงงานด้านความปลอดภัยเครือข่าย' }
+    { id: 'ITE201', name: 'IT Service Desk & Incident', credits: 4 },
+    { id: 'ITE421', name: 'Information Assurance and Security II (Pre:ITE420)', credits: 4 },
+    { id: 'ITE451', name: 'AWS Cloud Foundation', credits: 4 },
+    { id: 'ITE476', name: 'Network II (Pre:ITE475)', credits: 4 },
+    { id: 'ITE477', name: 'Window Server', credits: 4 },
   ]
 };
 
