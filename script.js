@@ -609,3 +609,108 @@ function resetForm() {
     
     console.log('✅ Form reset successfully');
 }
+
+// Reset the form for a new registration
+function resetForm() {
+    console.log('🔄 Resetting form...');
+    
+    // Reset form fields
+    if (studentInfoForm) {
+        studentInfoForm.reset();
+    }
+    
+    // Reset selected courses
+    selectedCourses = [];
+    
+    // Reset progress bar
+    if (progressBar) {
+        progressBar.style.width = '50%';
+    }
+    
+    // Go back to page 1
+    if (successMessage && page1) {
+        successMessage.style.display = 'none';
+        page1.classList.add('active');
+        if (page2) {
+            page2.classList.remove('active');
+        }
+    }
+    
+    // Reset UI
+    updateSelectedCoursesList();
+    
+    console.log('✅ Form reset successfully');
+}
+
+// Show error message
+function showError(message) {
+    const errorMessage = document.getElementById('errorMessage');
+    const errorDetails = document.getElementById('error-details');
+    
+    if (errorMessage && errorDetails) {
+        errorDetails.textContent = message;
+        errorMessage.style.display = 'block';
+    }
+}
+
+// Hide error message
+function hideError() {
+    const errorMessage = document.getElementById('errorMessage');
+    if (errorMessage) {
+        errorMessage.style.display = 'none';
+    }
+}
+
+// Show loading overlay
+function showLoading() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+}
+
+// Hide loading overlay
+function hideLoading() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 ระบบเลือกวิชาเริ่มทำงานแล้ว');
+    
+    // Initialize DOM elements
+    initializeDOMElements();
+    
+    // Set up language switcher
+    if (langButtons) {
+        langButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const lang = this.getAttribute('data-lang');
+                switchLanguage(lang);
+            });
+        });
+    }
+
+    // Set up form navigation
+    if (studentInfoForm) {
+        studentInfoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('📝 Form submitted');
+            if (validateStudentInfo()) {
+                goToPage2();
+            }
+        });
+    }
+
+    if (backBtn) backBtn.addEventListener('click', goToPage1);
+    if (submitBtn) submitBtn.addEventListener('click', submitRegistration);
+    if (newRegistrationBtn) newRegistrationBtn.addEventListener('click', resetForm);
+
+    // Initialize with Thai language
+    switchLanguage('th');
+    
+    console.log('✅ System initialized successfully');
+});
