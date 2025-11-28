@@ -1,3 +1,13 @@
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAIPiP2AxHNE87milCT62BUkd8IianrndI",
+    authDomain: "course-selection-lbc2d.firebasestorage.app",
+    projectId: "course-selection-lbc2d",
+    storageBucket: "course-selection-lbc2d.firebasestorage.app", 
+    messagingSenderId: "163316202036",
+    appId: "1:163316202036:web:cddf023b85lba508f52861",
+    measurementId: "G-7GRSH87NN1"
+};
 // const firebaseConfig = {
 //     apiKey: "your-api-key-here",
 //     authDomain: "your-project.firebaseapp.com",
